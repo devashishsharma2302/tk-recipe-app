@@ -4,7 +4,7 @@ Test for models.
 
 from django.test import TestCase
 
-from app.core import models
+from core import models
 
 
 def create_recipe(name="Sample Recipe Name", description="Sample Description."):
@@ -57,28 +57,22 @@ class ModelTests(TestCase):
         sample_recipe_2 = create_recipe(name="Recipe 2")
 
         # Creating ingredients
-        sample_ingredient_1 = create_ingredient(recipe=sample_recipe_1)
-        sample_ingredient_1 = create_ingredient(recipe=sample_recipe_1)
-        sample_ingredient_2 = create_ingredient(recipe=sample_recipe_2)
+        create_ingredient(recipe=sample_recipe_1)
+        create_ingredient(recipe=sample_recipe_1)
+        create_ingredient(recipe=sample_recipe_2)
 
         # Test Ingredients are created
         self.assertEqual(models.Ingredient.objects.all().count(), 3)
-        self.assertEqual(models.Ingredient.objects.filter(id=sample_ingredient_1.id).count(), 2)
+        self.assertEqual(models.Ingredient.objects.filter(recipe=sample_recipe_1).count(), 2)
 
         # Delete Recipe 1
         models.Recipe.objects.filter(id=sample_recipe_1.id).delete()
 
         # Test recipe is deleted
-        self.assertEqual(models.Recipe.objects.filter(id=sample_recipe_1).count(), 0)
+        self.assertEqual(models.Recipe.objects.filter(id=sample_recipe_1.id).count(), 0)
 
         # Test related ingredients are deleted
-        self.assertEqual(models.Ingredient.objects.filter(id=sample_ingredient_1.id).count(), 0)
+        self.assertEqual(models.Ingredient.objects.filter(recipe=sample_recipe_1).count(), 0)
 
         # Test unrelated ingredients are not deleted
-        self.assertEqual(models.Ingredient.objects.filter(id=sample_ingredient_2).count(), 1)
-
-        
-
-
-
-
+        self.assertEqual(models.Ingredient.objects.filter(recipe=sample_recipe_2).count(), 1)
