@@ -93,3 +93,32 @@ class PublicRecipeApiTests(TestCase):
         self.assertEqual(recipe.ingredients.count(), 3)
         self.assertEqual(recipe.ingredients.first().name, "dough")
         self.assertEqual(recipe.ingredients.last().name, "tomato")
+
+    def test_patch_recipe(self):
+        """Test update of a recipe fields."""
+        # Creating recipe
+        recipe = create_recipe(name="Recipe Name", description="Recipe Description.")
+
+        # Creating Ingredients
+        ingredient_1 = create_ingredient(recipe=recipe, name="Cheese")
+        ingredient_2 = create_ingredient(recipe=recipe, name="Tomato")
+
+        payload = {'name': 'New recipe name', 'ingredients': [{'name': "Yeast"}]}
+        url = detail_url(recipe.id)
+        res = self.client.patch(url, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        recipe.refresh_from_db()
+
+        # Test that original description field is unchanged
+        self.assertEqual(recipe.description, "Recipe Description.")
+
+        # Test that the recipe has been updated in db and new ingredient is created.
+        self.assertEqual(recipe.name, payload['name'])
+        self.assertEqual(recipe.ingredients.count(), 1)
+        self.assertEqual(recipe.ingredients.first().name, "Yeast")
+
+        # Test that old ingredient objects are deleted
+        self.assertEqual(Ingredient.objects.filter(recipe=recipe).count(), 1)
+        self.assertFalse(Ingredient.objects.filter(id=ingredient_1.id).exists())
+        self.assertFalse(Ingredient.objects.filter(id=ingredient_2.id).exists())
