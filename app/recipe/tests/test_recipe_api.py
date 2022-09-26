@@ -75,3 +75,21 @@ class PublicRecipeApiTests(TestCase):
         self.assertEqual(res.data.get('description'), "Sample Recipe Description.")
         self.assertEqual(len(res.data.get('ingredients')), 1)
         self.assertEqual(res.data.get('ingredients')[0].get('name'), "Cheese")
+
+    def test_create_recipe(self):
+        """Test creating a recipe."""
+        payload = {
+            'name': 'New Recipe',
+            'description': "Some description",
+            'ingredients': [{"name": "dough"}, {"name": "cheese"}, {"name": "tomato"}]
+        }
+        res = self.client.post(RECIPES_URL, payload, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        recipe = Recipe.objects.get(id=res.data['id'])
+
+        self.assertEqual(recipe.name, payload['name'])
+        self.assertEqual(recipe.description, payload['description'])
+        self.assertEqual(recipe.ingredients.count(), 3)
+        self.assertEqual(recipe.ingredients.first().name, "dough")
+        self.assertEqual(recipe.ingredients.last().name, "tomato")

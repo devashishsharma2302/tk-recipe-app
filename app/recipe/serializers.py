@@ -2,6 +2,7 @@
 Serializers for recipe APIs
 """
 
+from django.db import transaction
 from rest_framework import serializers
 
 from core.models import (
@@ -28,3 +29,14 @@ class RecipeSerializer(serializers.ModelSerializer):
             'id', 'name', 'description', 'ingredients',
         ]
         read_only_fields = ['id']
+
+    def create(self, validated_data):
+        """Create a recipe."""
+        ingredients = validated_data.pop('ingredients', [])
+        with transaction.atomic():
+            recipe = Recipe.objects.create(**validated_data)
+
+            # Create ingredient objects
+            Ingredient.objects.bulk_create([Ingredient(name=ingredient.get('name'), recipe=recipe) for ingredient in
+                                            ingredients])
+        return recipe
