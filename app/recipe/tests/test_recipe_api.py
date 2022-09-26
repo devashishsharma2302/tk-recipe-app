@@ -58,6 +58,37 @@ class PublicRecipeApiTests(TestCase):
         self.assertEqual(len(res.data[1].get('ingredients')), 2)
         self.assertEqual(res.data[0].get('ingredients')[0].get('name'), "Cheese")
 
+    def test_list_recipes_search_by_name(self):
+        """Test retrieving a list of recipes filtered successfully by name substring."""
+
+        # Creating recipes
+        recipe_1 = create_recipe(name="Pizza", )
+        recipe_2 = create_recipe(name="Pasta")
+
+        # Test search for Pi
+        res = self.client.get(RECIPES_URL, {'name': 'Pi'})
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data), 1)
+        self.assertEqual(res.data[0].get('name'), "Pizza")
+        self.assertEqual(res.data[0].get('id'), recipe_1.id)
+
+        # Test search for Pi, case-insensitive
+        res = self.client.get(RECIPES_URL, {'name': 'pi'})
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data), 1)
+        self.assertEqual(res.data[0].get('name'), "Pizza")
+        self.assertEqual(res.data[0].get('id'), recipe_1.id)
+
+        # Test search for P
+        res = self.client.get(RECIPES_URL, {'name': 'P'})
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data), 2)
+
+        # Test search not found
+        res = self.client.get(RECIPES_URL, {'name': 'Lasagna'})
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data), 0)
+
     def test_recipe_details(self):
         """Test retrieving detailed view of a recipe."""
 
