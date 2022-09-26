@@ -32,7 +32,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Retrieve recipes with possible search by name."""
         name = self.request.query_params.get('name')
-        queryset = self.queryset
+        queryset = self.queryset.all()
         if name:
             queryset = queryset.filter(name__icontains=name)
 
