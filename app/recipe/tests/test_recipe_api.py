@@ -122,3 +122,16 @@ class PublicRecipeApiTests(TestCase):
         self.assertEqual(Ingredient.objects.filter(recipe=recipe).count(), 1)
         self.assertFalse(Ingredient.objects.filter(id=ingredient_1.id).exists())
         self.assertFalse(Ingredient.objects.filter(id=ingredient_2.id).exists())
+
+    def test_delete_recipe(self):
+        """Test deleting a recipe."""
+        recipe = create_recipe()
+
+        ingredient_1 = create_ingredient(recipe=recipe, name="Cheese")
+
+        url = detail_url(recipe.id)
+        res = self.client.delete(url)
+
+        self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Recipe.objects.filter(id=recipe.id).exists())
+        self.assertFalse(Ingredient.objects.filter(id=ingredient_1.id).exists())
