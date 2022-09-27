@@ -1,6 +1,7 @@
 """
 Test for recipe API methods.
 """
+import json
 
 from django.test import TestCase
 from django.urls import reverse
@@ -31,8 +32,9 @@ def create_ingredient(recipe, name="Sample Ingredient Name"):
 class PublicRecipeApiTests(TestCase):
     """Unauthenticated Recipe API tests"""
 
-    def setUp(self):
-        self.client = APIClient()
+    @classmethod
+    def setUpTestData(cls):
+        cls.client = APIClient()
 
     def test_list_recipes(self):
         """Test retrieving a list of recipes."""
@@ -114,7 +116,8 @@ class PublicRecipeApiTests(TestCase):
             'description': "Some description",
             'ingredients': [{"name": "dough"}, {"name": "cheese"}, {"name": "tomato"}]
         }
-        res = self.client.post(RECIPES_URL, payload, format='json')
+
+        res = self.client.post(RECIPES_URL, data=json.dumps(payload), content_type="application/json")
 
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
         recipe = Recipe.objects.get(id=res.data['id'])
@@ -136,7 +139,7 @@ class PublicRecipeApiTests(TestCase):
 
         payload = {'name': 'New recipe name', 'ingredients': [{'name': "Yeast"}]}
         url = detail_url(recipe.id)
-        res = self.client.patch(url, payload, format='json')
+        res = self.client.patch(url, json.dumps(payload), content_type='application/json')
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         recipe.refresh_from_db()
