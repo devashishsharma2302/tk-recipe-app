@@ -1,6 +1,7 @@
 """
 Test for recipe API methods.
 """
+import copy
 
 from django.test import TestCase
 from django.urls import reverse
@@ -108,6 +109,16 @@ class PublicRecipeApiTests(TestCase):
         self.assertEqual(len(res.data.get('ingredients')), 1)
         self.assertEqual(res.data.get('ingredients')[0].get('name'), "Cheese")
 
+    def test_retrieve_non_existent_recipe_details(self):
+        """Test retrieving recipe which does not exist."""
+
+        non_existent_recipe_id = 1000
+
+        res = self.client.get(detail_url(non_existent_recipe_id))
+
+        # Check response structure
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_create_recipe(self):
         """Test creating a recipe."""
         payload = {
@@ -117,7 +128,6 @@ class PublicRecipeApiTests(TestCase):
         }
 
         res = self.client.post(path=RECIPES_URL, data=payload, content_type="application/json")
-        # res = self.client.post(RECIPES_URL, data=json.dumps(payload), content_type="application/json")
 
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
         recipe = Recipe.objects.get(id=res.data['id'])
@@ -127,6 +137,41 @@ class PublicRecipeApiTests(TestCase):
         self.assertEqual(recipe.ingredients.count(), 3)
         self.assertEqual(recipe.ingredients.first().name, "dough")
         self.assertEqual(recipe.ingredients.last().name, "tomato")
+
+    def test_create_recipe_incorrect_data(self):
+        """Test creating a recipe with incorrect data."""
+
+        # Test incorrect payload
+        payload = {
+            'some_random_key': '',
+        }
+        res = self.client.post(path=RECIPES_URL, data=payload, content_type="application/json")
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Recipe.objects.count(), 0)
+
+        # Test empty payload
+        payload = {}
+        res = self.client.post(path=RECIPES_URL, data=payload, content_type="application/json")
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Recipe.objects.count(), 0)
+
+        # Test empty name
+        payload = {'name': ''}
+        res = self.client.post(path=RECIPES_URL, data=payload, content_type="application/json")
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Recipe.objects.count(), 0)
+
+        # Test empty ingredient name
+        payload = {'name': 'Recipe name', 'ingredients': {'name': ''}}
+        res = self.client.post(path=RECIPES_URL, data=payload, content_type="application/json")
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Recipe.objects.count(), 0)
+
+        # Test empty description, should be accepted
+        payload = {'name': 'Recipe name', 'description': ''}
+        res = self.client.post(path=RECIPES_URL, data=payload, content_type="application/json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Recipe.objects.count(), 1)
 
     def test_patch_recipe(self):
         """Test update of a recipe fields."""
@@ -156,6 +201,52 @@ class PublicRecipeApiTests(TestCase):
         self.assertEqual(Ingredient.objects.filter(recipe=recipe).count(), 1)
         self.assertFalse(Ingredient.objects.filter(id=ingredient_1.id).exists())
         self.assertFalse(Ingredient.objects.filter(id=ingredient_2.id).exists())
+
+    def _compare_recipe_objects(self, recipe1, recipe2):
+        """Compare two objects of Recipe Model"""
+        return recipe1.name == recipe2.name and recipe1.description == recipe2.description and list(
+            recipe1.ingredients.all()) == list(recipe2.ingredients.all())
+
+    def test_patch_recipe_incorrect_data(self):
+        """Test updating a recipe with incorrect data."""
+
+        # Creating recipe
+        recipe = create_recipe(name="Recipe Name", description="Recipe Description.")
+
+        # Creating Ingredients
+        create_ingredient(recipe=recipe, name="Cheese")
+        create_ingredient(recipe=recipe, name="Tomato")
+
+        # Save original recipe object for comparison
+        recipe.refresh_from_db()
+        original_recipe_object = copy.deepcopy(recipe)
+        url = detail_url(recipe.id)
+
+        # Test incorrect payload
+        payload = {
+            'some_random_key': '',
+        }
+        res = self.client.patch(path=url, data=payload, content_type="application/json")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        # Test empty payload
+        payload = {}
+        res = self.client.patch(path=url, data=payload, content_type="application/json")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        # Test empty name
+        payload = {'name': ''}
+        res = self.client.patch(path=url, data=payload, content_type="application/json")
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Test empty ingredient name
+        payload = {'name': 'Recipe name', 'ingredients': {'name': ''}}
+        res = self.client.patch(path=url, data=payload, content_type="application/json")
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Test all of the above updates did not update the original recipe object
+        recipe.refresh_from_db()
+        self.assertTrue(self._compare_recipe_objects(recipe, original_recipe_object))
 
     def test_delete_recipe(self):
         """Test deleting a recipe."""
